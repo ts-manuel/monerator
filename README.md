@@ -1,5 +1,4 @@
-# Monero P2Pool XMRIG
-## Setup Script for Ubuntu/Debian Systems
+# Monero P2Pool XMRIG Setup
 
 ![monerator-menu](https://github.com/user-attachments/assets/6daf1551-58f9-4283-8b43-1c862a7c6475)
 
@@ -10,6 +9,7 @@
     <li><a href="#features">Features</a></li>
     <li><a href="#requirements">Requirements</a></li>
     <li><a href="#installation">Installation</a></li>
+    <li><a href="#configuration">Configuration</a></li>
     <li><a href="#usage">Usage</a></li>
     <ol>
       <li><a href="#available-commands">Available Commands</a></li>
@@ -25,17 +25,22 @@
 
 ## Introduction
 
-An easy to use script to automate the setup of Monero P2Pool and XMRIG.\
-Every component can be individually configured, the script lives the fredom to chose witch component to install.\
-This script works on Ubuntu/Debinan based systems.\
+**Monerator** is an automation tool that simplifies the setup of **Monero**, **P2Pool**, and **XMRig**.  
+Each component can be installed and configured independently using user-editable configuration files located in the `config/` directory, allowing full control over the installation process.
+
+Monerator is compatible with **Ubuntu and Debian-based Linux distributions**.
 Work is based on monerominer by Mik: https://github.com/mik-tf/monerominer
 
 ## Features
 
-- Full Monero node setup
-- P2Pool mining node configuration
-- XMRig CPU miner optimization
-- Support for P2Pool Mini
+- Automated installation of:
+  - Monero daemon
+  - P2Pool
+  - XMRig
+- Modular design: install only the components you need
+- Per-component configuration via editable config files
+- Designed for reproducible and customizable setups
+- Minimal dependencies, simple execution
 - Systemd service integration
 - Service management commands
 - Mining statistics monitoring
@@ -59,9 +64,20 @@ To create a new Monero wallet, consult the Monero documentation:
 git clone https://github.com/ts-manuel/monerator.git
 
 cd monerator
- 
+
 ./monerator install
 ```
+
+## Configuration
+
+All configuration files are stored in the `config/` directory.
+
+Each component (**Monero**, **P2Pool**, **XMRig**) has its own configuration file, which can be edited by the user before running the installer to customize:
+- Installation behavior
+- Runtime options
+- Network and mining parameters
+
+This allows fine-grained control without modifying the main script.
 
 ## Usage
 
