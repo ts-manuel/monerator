@@ -1,24 +1,25 @@
-# Monero P2Pool XMRIG Setup Script for Ubuntu/Debian Systems
+# Monero P2Pool XMRIG
+## Setup Script for Ubuntu/Debian Systems
 
-## Table of Contents
+<details open="open">
+  <summary>Table of Contents</summary>
+  <ol>
+    <li><a href="#introduction">Introduction</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#requirements">Requirements</a></li>
+    <li><a href="#installation">Installation</a></li>
+    <li><a href="#usage">Usage</a></li>
+    <ol>
+      <li><a href="#available-commands">Available Commands</a></li>
+      <li><a href="#examples">Examples</a></li>
+      <li><a href="#service-management">Service Management</a></li>
+    </ol>
+    <li><a href="#important-notes">Important Notes</a></li>
+    <li><a href="#troubleshooting">Troubleshooting</a></li>
+    <li><a href="#references">References</a></li>
+  </ol>
+</details>
 
-- [Introduction](#introduction)
-- [Features](#features)
-- [Requirements](#requirements)
-- [Installation](#installation)
-- [Usage](#usage)
-  - [Available Commands](#available-commands)
-  - [Examples](#examples)
-  - [Service Management](#service-management)
-
-- [Important Notes](#important-notes)
-- [Troubleshooting](#troubleshooting)
-- [License](#license)
-- [References](#references)
-- [Contributing](#contributing)
-- [Support](#support)
-
----
 
 ## Introduction
 
@@ -116,10 +117,6 @@ If you encounter issues:
 4. Verify CPU compatibility with RandomX
 5. Check mining logs: `./monerator logs`
 
-## License
-
-This work is licensed under the [Apache License 2.0](./LICENSE).
-
 ## References
 
 For more information on Monero and P2Pool:
@@ -130,12 +127,3 @@ For more information on Monero and P2Pool:
 This work is based on monerominer by Mik: https://github.com/mik-tf/monerominer
 
 We are not endorsing Monero nor are a partner of Monero. This is for educational purpose only.
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## Support
-
-For issues, questions, or contributions, please visit:
-[GitHub Repository](https://github.com/ts-manuel/monerator)
