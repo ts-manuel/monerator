@@ -1,6 +1,8 @@
 # Monero P2Pool XMRIG
 ## Setup Script for Ubuntu/Debian Systems
 
+![monerator-menu](https://github.com/user-attachments/assets/6daf1551-58f9-4283-8b43-1c862a7c6475)
+
 <details open="open">
   <summary>Table of Contents</summary>
   <ol>
