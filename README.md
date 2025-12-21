@@ -26,9 +26,9 @@
 ## Introduction
 
 **Monerator** is an automation tool that simplifies the setup of **Monero**, **P2Pool**, and **XMRig**.  
-Each component can be installed and configured independently using user-editable configuration files located in the `config/` directory, allowing full control over the installation process.
+Each component can be installed and configured independently with user-editable configuration files located in the `config/` directory, allowing full control over the installation process.
 
-Monerator is compatible with **Ubuntu and Debian-based Linux distributions**.
+Monerator is compatible with **Ubuntu and Debian-based Linux distributions**.\
 Work is based on monerominer by Mik: https://github.com/mik-tf/monerominer
 
 ## Features
