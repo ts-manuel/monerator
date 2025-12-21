@@ -393,8 +393,11 @@ setup_xmrig() {
         error "XMRig installation failed"
     fi
 
-    # Load xmrig parameters from config file ad substitute log file path
-    xmrig_args=$(load_config_parameters_from_file "$(envsubst < "$SOURCE_DIR/config/xmrig.conf")")
+    # Load p2pool parameter from config file
+    xmrig_args=$(load_config_parameters_from_file "$SOURCE_DIR/config/xmrig.conf")
+
+    # Substitute log file path
+    xmrig_args=$(echo "$xmrig_args" | sed "s|\${XMRIG_LOG_FILE}|${XMRIG_LOG_FILE}|g")
 
     # XMRig service
     sudo tee /etc/systemd/system/xmrig.service > /dev/null << EOF
