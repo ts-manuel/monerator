@@ -1,6 +1,6 @@
 # Monero P2Pool XMRIG Setup
 
-![monerator-menu](https://github.com/user-attachments/assets/6daf1551-58f9-4283-8b43-1c862a7c6475)
+![monerator-menu](https://github.com/user-attachments/assets/7f05b4e8-f9bb-4506-99bb-ba69d248e0f1)
 
 <details open="open">
   <summary>Table of Contents</summary>
