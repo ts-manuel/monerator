@@ -727,14 +727,14 @@ show_interactive_menu() {
         echo -e "${BLUE}║         interactive menu           ║${NC}"
         echo -e "${BLUE}╚════════════════════════════════════╝${NC}"
         echo
-        echo "1) Install"
-        echo "2) Uninstall"
-        echo "3) Start the services"
-        echo "4) Stop the services"
-        echo "5) Show status of services"
-        echo "6) Show Logs"
-        echo "7) Delete Logs"
-        echo "8) Exit"
+        echo -e "1) ${GREEN}Install${NC}"
+        echo -e "2) ${GREEN}Uninstall${NC}"
+        echo -e "3) ${GREEN}Start the services${NC}"
+        echo -e "4) ${GREEN}Stop the services${NC}"
+        echo -e "5) ${GREEN}Show status of services${NC}"
+        echo -e "6) ${GREEN}Show Logs${NC}"
+        echo -e "7) ${GREEN}Delete Logs${NC}"
+        echo -e "8) ${GREEN}Exit${NC}"
         echo
         read -p "Select an option (1-8): " choice
 
