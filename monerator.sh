@@ -142,62 +142,85 @@ install_dependencies() {
 
 collect_user_inputs() {
 
-    # Check if WALLET_ADDRESS is set in config
-    local p2pool_config=$(load_config_parameters_from_file "$SOURCE_DIR/config/p2pool.conf")
+    clear
+    echo
+    echo -e "${BLUE}===== Choose what component to install =====${NC}"
+    echo
+    echo -e "1) ${GREEN}Monero${NC}                   (monero node only)"
+    echo -e "2) ${GREEN}XMRig${NC}                    (CPU miner only)"
+    echo -e "3) ${GREEN}Monero + P2Pool + XMRig${NC}  (all components)"
+    echo -e "4) ${GREEN}Exit${NC}"
+    echo
+    read -p "Select an option (1-4): " choice
 
-    # Load wallet address from p2pool config if present
-    WALLET_ADDRESS=""
-    if [[ $p2pool_config =~ --wallet[[:space:]]+([0-9A-Za-z]+) ]]; then
-        WALLET_ADDRESS="${BASH_REMATCH[1]}"
-    else
-        echo -e "${YELLOW}No wallet address found in p2pool configuration.${NC}"
-    fi
+    case $choice in
+        1) CREATE_SERVICE_MONEROD="y"
+            CREATE_SERVICE_P2POOL="n"
+            CREATE_SERVICE_XMRIG="n" ;;
+        2) CREATE_SERVICE_MONEROD="n"
+            CREATE_SERVICE_P2POOL="n"
+            CREATE_SERVICE_XMRIG="y" ;;
+        3) CREATE_SERVICE_MONEROD="y"
+            CREATE_SERVICE_P2POOL="y"
+            CREATE_SERVICE_XMRIG="y" ;;
+        4) 
+            echo -e "${GREEN}Exiting...${NC}"
+            exit 0 
+            ;;
+        *) 
+            echo -e "${RED}Invalid option${NC}"
+            sleep 1
+            ;;
+    esac
 
-    # Do check if not configured to skip or if no address is set
-    if [ "$SKIP_WALLET_ADDRESS_CHECK" != 1 ] || [ "$WALLET_ADDRESS" == "" ]; then
-        
-        # If a wallet address is already present in config, offer to use it
-        if [ -n "$WALLET_ADDRESS" ]; then
-            echo
-            echo -e "Found existing wallet address: ${GREEN}${WALLET_ADDRESS}${NC}"
-            read -p "Do you want to use this address? [y/n]: " USE_EXISTING
-            if [[ $USE_EXISTING =~ ^[Yy]$ ]]; then
-                : # WALLET_ADDRESS is already set from config
-            else
-                WALLET_ADDRESS=""
-            fi
+
+    # Check wallet address only if P2Pool is to be installed
+    if [[ $CREATE_SERVICE_P2POOL =~ ^[Yy]$ ]]; then
+
+        # Check if WALLET_ADDRESS is set in config
+        local p2pool_config=$(load_config_parameters_from_file "$SOURCE_DIR/config/p2pool.conf")
+
+        # Load wallet address from p2pool config if present
+        WALLET_ADDRESS=""
+        if [[ $p2pool_config =~ --wallet[[:space:]]+([0-9A-Za-z]+) ]]; then
+            WALLET_ADDRESS="${BASH_REMATCH[1]}"
+        else
+            echo -e "${YELLOW}No wallet address found in p2pool configuration.${NC}"
         fi
-    else
-        echo -e "${YELLOW}Skipping wallet address validation as per configuration.${NC}"
-        echo -e "${YELLOW}Using wallet address: ${WALLET_ADDRESS}${NC}"
-    fi
-    
-    # If no existing address or user wants a new one
-    if [ -z "$WALLET_ADDRESS" ]; then
-        while true; do
-            read -p "Enter your Monero wallet address (starts with 4): " WALLET_ADDRESS
-            if [[ $WALLET_ADDRESS =~ ^4[0-9A-Za-z]{94}$ ]]; then
-                break
-            else
-                echo -e "${RED}Invalid Monero address format. Please try again.${NC}"
+
+        # Do check if not configured to skip or if no address is set
+        if [ "$SKIP_WALLET_ADDRESS_CHECK" != 1 ] || [ "$WALLET_ADDRESS" == "" ]; then
+            
+            # If a wallet address is already present in config, offer to use it
+            if [ -n "$WALLET_ADDRESS" ]; then
+                echo
+                echo -e "Found existing wallet address: ${GREEN}${WALLET_ADDRESS}${NC}"
+                read -p "Do you want to use this address? [y/n]: " USE_EXISTING
+                if [[ $USE_EXISTING =~ ^[Yy]$ ]]; then
+                    : # WALLET_ADDRESS is already set from config
+                else
+                    WALLET_ADDRESS=""
+                fi
             fi
-        done
+        else
+            echo -e "${YELLOW}Skipping wallet address validation as per configuration.${NC}"
+            echo -e "${YELLOW}Using wallet address: ${WALLET_ADDRESS}${NC}"
+        fi
+        
+        # If no existing address or user wants a new one
+        if [ -z "$WALLET_ADDRESS" ]; then
+            while true; do
+                read -p "Enter your Monero wallet address (starts with 4): " WALLET_ADDRESS
+                if [[ $WALLET_ADDRESS =~ ^4[0-9A-Za-z]{94}$ ]]; then
+                    break
+                else
+                    echo -e "${RED}Invalid Monero address format. Please try again.${NC}"
+                fi
+            done
+        fi
+
     fi
 
-    # Ask if the user wants to install the monero daemon
-    echo
-    echo -e "Do you want to install the ${GREEN}monero${NC} daemon? [y/n]: "
-    read -p "" CREATE_SERVICE_MONEROD
-
-    # Ask if the user wants to install the p2pool daemon
-    echo
-    echo -e "Do you want to install the ${GREEN}p2pool${NC} daemon? [y/n]: "
-    read -p "" CREATE_SERVICE_P2POOL
-
-    # Ask if the user wants to install the xmrig daemon
-    echo
-    echo -e "Do you want to install the ${GREEN}xmrig${NC} daemon? [y/n]: "
-    read -p "" CREATE_SERVICE_XMRIG
 }
 
 setup_monero_daemon() {
@@ -403,8 +426,8 @@ setup_xmrig() {
     sudo tee /etc/systemd/system/xmrig.service > /dev/null << EOF
 [Unit]
 Description=XMRig CPU Miner
-After=p2pool.service
-Requires=p2pool.service
+After=$(if [[ $CREATE_SERVICE_P2POOL =~ ^[Yy]$ ]]; then echo "p2pool.service"; else echo "network.target"; fi)
+$(if [[ $CREATE_SERVICE_P2POOL =~ ^[Yy]$ ]]; then echo "Requires=p2pool.service"; fi)
 
 [Service]
 Type=simple
@@ -553,9 +576,7 @@ uninstall() {
 }
 
 start_services() {
-    clear
-    echo
-    echo -e "${BLUE}===== Starting Mining Services =====${NC}"
+    log "Starting mining services..."
 
     if systemctl is-enabled --quiet monerod.service; then
         sudo systemctl start monerod
