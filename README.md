@@ -1,4 +1,4 @@
-# Monero P2Pool XMRIG Setup
+# Monero P2Pool XMRig Setup
 
 ![monerator-menu](https://github.com/user-attachments/assets/7f05b4e8-f9bb-4506-99bb-ba69d248e0f1)
 
