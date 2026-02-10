@@ -146,12 +146,13 @@ collect_user_inputs() {
     echo
     echo -e "${BLUE}===== Choose what component to install =====${NC}"
     echo
-    echo -e "1) ${GREEN}Monero${NC}                   (monero node only)"
-    echo -e "2) ${GREEN}XMRig${NC}                    (CPU miner only)"
-    echo -e "3) ${GREEN}Monero + P2Pool + XMRig${NC}  (all components)"
-    echo -e "4) ${GREEN}Exit${NC}"
+    echo -e "1) ${GREEN}Monero${NC}                   (Local monero node only)"
+    echo -e "2) ${GREEN}XMRig${NC}                    (Monero miner only)"
+    echo -e "3) ${GREEN}Monero + P2Pool${NC}          (Local mining pool without miner)"
+    echo -e "4) ${GREEN}Monero + P2Pool + XMRig${NC}  (all components)"
+    echo -e "5) ${GREEN}Exit${NC}"
     echo
-    read -p "Select an option (1-4): " choice
+    read -p "Select an option (1-5): " choice
 
     case $choice in
         1) CREATE_SERVICE_MONEROD="y"
@@ -162,8 +163,11 @@ collect_user_inputs() {
             CREATE_SERVICE_XMRIG="y" ;;
         3) CREATE_SERVICE_MONEROD="y"
             CREATE_SERVICE_P2POOL="y"
+            CREATE_SERVICE_XMRIG="n" ;;
+        4) CREATE_SERVICE_MONEROD="y"
+            CREATE_SERVICE_P2POOL="y"
             CREATE_SERVICE_XMRIG="y" ;;
-        4) 
+        5) 
             echo -e "${GREEN}Exiting...${NC}"
             exit 0 
             ;;
@@ -233,7 +237,16 @@ setup_monero_daemon() {
     # Remove 'v' prefix if present
     local VERSION_NUM=${MONERO_VERSION#v}
     
-    local TARFILE="monero-linux-x64-v${VERSION_NUM}.tar.bz2"
+    # Detect system architecture and set appropriate download URL
+    local ARCH=$(uname -m)
+    if [[ "$ARCH" == "x86_64" || "$ARCH" == "amd64" ]]; then
+        local TARFILE="monero-linux-x64-v${VERSION_NUM}.tar.bz2"
+    elif [[ "$ARCH" == "aarch64" ]]; then
+        local TARFILE="monero-linux-armv8-v${VERSION_NUM}.tar.bz2"
+    else
+        error "Unsupported architecture: $ARCH"
+    fi
+
     local DOWNLOAD_URL="https://downloads.getmonero.org/cli/${TARFILE}"
     
     if [ -f "$TARFILE" ]; then
@@ -303,8 +316,16 @@ setup_p2pool() {
     
     cd $BASE_DIR || error "Failed to enter base directory"
 
-    # Define filenames
-    local P2POOL_FILENAME="p2pool-${P2POOL_VERSION}-linux-x64"
+    # Detect system architecture and set appropriate download URL
+    local ARCH=$(uname -m)
+    if [[ "$ARCH" == "x86_64" || "$ARCH" == "amd64" ]]; then
+        local P2POOL_FILENAME="p2pool-${P2POOL_VERSION}-linux-x64"
+    elif [[ "$ARCH" == "aarch64" ]]; then
+        local P2POOL_FILENAME="p2pool-${P2POOL_VERSION}-linux-aarch64"
+    else
+        error "Unsupported architecture: $ARCH"
+    fi
+
     local TARFILE="${P2POOL_FILENAME}.tar.gz"
     local DOWNLOAD_URL="https://github.com/SChernykh/p2pool/releases/download/${P2POOL_VERSION}/${TARFILE}"
     
@@ -398,15 +419,25 @@ setup_xmrig() {
     
     mkdir -p "$XMRIG_DIR"
     cd "$XMRIG_DIR" || error "Failed to enter XMRig directory"
-    
-    # Download and extract XMRig
-    local XMRIG_VERSION_NUM=${XMRIG_VERSION#v}  # Remove 'v' prefix from version
-    local DOWNLOAD_URL="https://github.com/xmrig/xmrig/releases/download/${XMRIG_VERSION}/xmrig-${XMRIG_VERSION_NUM}-noble-x64.tar.gz"
-    
-    log "Downloading from: ${DOWNLOAD_URL}"
-    wget -q "${DOWNLOAD_URL}" -O xmrig.tar.gz || error "Failed to download XMRig"
-    tar xzf xmrig.tar.gz --strip-components=1 || error "Failed to extract XMRig"
-    rm xmrig.tar.gz
+
+    # XMRig does not provide official ARM buils,
+    # TODO: add support for building from source.
+    local ARCH=$(uname -m)
+    if [[ "$ARCH" == "x86_64" || "$ARCH" == "amd64" ]]; then
+        # Download and extract XMRig
+        local XMRIG_VERSION_NUM=${XMRIG_VERSION#v}  # Remove 'v' prefix from version
+        local DOWNLOAD_URL="https://github.com/xmrig/xmrig/releases/download/${XMRIG_VERSION}/xmrig-${XMRIG_VERSION_NUM}-noble-x64.tar.gz"
+        
+        log "Downloading from: ${DOWNLOAD_URL}"
+        wget -q "${DOWNLOAD_URL}" -O xmrig.tar.gz || error "Failed to download XMRig"
+        tar xzf xmrig.tar.gz --strip-components=1 || error "Failed to extract XMRig"
+        rm xmrig.tar.gz
+    elif [[ "$ARCH" == "aarch64" ]]; then
+        # TODO: Add support for building XMRig from source on ARM architecture
+        error "Unsupported architecture: $ARCH"
+    else
+        error "Unsupported architecture: $ARCH"
+    fi
 
     # Set executable permissions
     chmod +x xmrig
