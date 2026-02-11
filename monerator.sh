@@ -416,7 +416,7 @@ setup_xmrig() {
     local ARCH=$(uname -m)
     if [[ "$ARCH" == "x86_64" || "$ARCH" == "amd64" ]]; then
         # Download and extract XMRig
-        local TARFILE="xmrig-${XMRIG_VERSION_NUM#v}-noble-x64.tar.gz"
+        local TARFILE="xmrig-${XMRIG_VERSION#v}-noble-x64.tar.gz"
         local DOWNLOAD_URL="https://github.com/xmrig/xmrig/releases/download/${XMRIG_VERSION}/${TARFILE}"
         
         download_and_extract "${DOWNLOAD_URL}" "${TARFILE}"
