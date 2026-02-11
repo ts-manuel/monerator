@@ -411,6 +411,7 @@ setup_xmrig() {
     cd "$XMRIG_DIR" || error "Failed to enter XMRig directory"
 
     # Remove current version of xmrig if it exists
+    find . -maxdepth 1 -type d -delete
     find . -maxdepth 1 ! -name '*.tar.gz' -type f -delete
 
     local ARCH=$(uname -m)
