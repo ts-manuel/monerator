@@ -113,6 +113,22 @@ load_config_parameters_from_file() {
     echo "${args[@]}"
 }
 
+# Function to download a file if it does not already exist
+# this is used to avoid re-downloading large files if they are already present
+# it takes two arguments: the URL to download from and the output file name
+# the file is saved to the current directory
+download_if_not_exists() {
+    local url="$1"
+    local output="$2"
+
+    if [ -f "$output" ]; then
+        log "Found existing file: $output, skipping download"
+    else
+        log "Downloading from: $url"
+        wget -q "$url" -O "$output" || error "Failed to download from $url"
+    fi
+}
+
 install_dependencies() {
     log "Installing system dependencies..."
     
@@ -135,6 +151,7 @@ install_dependencies() {
         libexpat1-dev \
         libgtest-dev \
         libcurl4-openssl-dev \
+        libhwloc-dev \
         git \
         wget \
         tar
@@ -249,13 +266,8 @@ setup_monero_daemon() {
 
     local DOWNLOAD_URL="https://downloads.getmonero.org/cli/${TARFILE}"
     
-    if [ -f "$TARFILE" ]; then
-        log "Found existing Monero archive, skipping download"
-    else
-        log "Downloading from: ${DOWNLOAD_URL}"
-        wget -q "${DOWNLOAD_URL}" -O "$TARFILE" || error "Failed to download Monero"
-    fi
-    
+    # Download file if not already present
+    download_if_not_exists "${DOWNLOAD_URL}" "${TARFILE}"
     tar xjf "$TARFILE" --strip-components=1
     
     # Set proper permissions
@@ -333,8 +345,7 @@ setup_p2pool() {
     fi
 
     # Download fresh copy
-    log "Downloading from: ${DOWNLOAD_URL}"
-    wget -q "${DOWNLOAD_URL}" || error "Failed to download P2Pool"
+    download_if_not_exists "${DOWNLOAD_URL}" "${TARFILE}"
 
     # Verify the download
     if [ ! -f "$TARFILE" ] || [ ! -s "$TARFILE" ]; then
@@ -424,8 +435,38 @@ setup_xmrig() {
         tar xzf xmrig.tar.gz --strip-components=1 || error "Failed to extract XMRig"
         rm xmrig.tar.gz
     elif [[ "$ARCH" == "aarch64" ]]; then
-        # TODO: Add support for building XMRig from source on ARM architecture
-        error "Unsupported architecture: $ARCH"
+        # Download XMRig source code
+        local TARFILE="${XMRIG_VERSION}.tar.gz"
+        local DOWNLOAD_URL="https://github.com/xmrig/xmrig/archive/refs/tags/${TARFILE}"
+
+        download_if_not_exists "${DOWNLOAD_URL}" "xmrig.tar.gz"
+
+        # Extract with error checking
+        log "Extracting XMRig source code..."
+        if ! tar xzf "$TARFILE"; then
+            rm -f "$TARFILE"
+            error "Failed to extract XMRig source code"
+        fi
+
+        # Enter the extracted source directory (should be named xmrig-<version>)
+        local SOURCE_SUBDIR=$(find . -maxdepth 1 -type d -name "xmrig-*")
+        if [ -z "$SOURCE_SUBDIR" ]; then
+            error "Failed to find extracted XMRig source directory"
+        fi
+        cd "$SOURCE_SUBDIR" || error "Failed to enter XMRig source subdirectory"
+
+        # Build from source
+        mkdir build
+        cd build || error "Failed to enter XMRig build directory"
+        cmake .. || error "Failed to configure XMRig build"
+        make -j$(nproc) || error "Failed to build XMRig"
+
+        # Copy the built binary to the main XMRIG_DIR
+        cp xmrig ../../xmrig || error "Failed to copy XMRig binary"
+
+        # Remove source directory
+        cd ../../
+        rm -rf "$SOURCE_SUBDIR"
     else
         error "Unsupported architecture: $ARCH"
     fi
