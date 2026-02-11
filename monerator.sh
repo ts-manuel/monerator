@@ -419,14 +419,14 @@ setup_xmrig() {
         local TARFILE="xmrig-${XMRIG_VERSION_NUM#v}-noble-x64.tar.gz"
         local DOWNLOAD_URL="https://github.com/xmrig/xmrig/releases/download/${XMRIG_VERSION}/${TARFILE}"
         
-        download_if_not_exists "${DOWNLOAD_URL}" "${TARFILE}"
+        download_and_extract "${DOWNLOAD_URL}" "${TARFILE}"
 
     elif [[ "$ARCH" == "aarch64" ]]; then
         # Download XMRig source code
         local TARFILE="${XMRIG_VERSION}.tar.gz"
         local DOWNLOAD_URL="https://github.com/xmrig/xmrig/archive/refs/tags/${TARFILE}"
 
-        download_if_not_exists "${DOWNLOAD_URL}" "xmrig.tar.gz"
+        download_and_extract "${DOWNLOAD_URL}" "${TARFILE}"
 
         # Build from source
         mkdir build
