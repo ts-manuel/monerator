@@ -113,19 +113,28 @@ load_config_parameters_from_file() {
     echo "${args[@]}"
 }
 
-# Function to download a file if it does not already exist
+# Function to download a tar file and extract it with error checking.
+# If the file already exists, it will skip the download but still attempt to extract it.
 # this is used to avoid re-downloading large files if they are already present
 # it takes two arguments: the URL to download from and the output file name
-# the file is saved to the current directory
-download_if_not_exists() {
+# the tar file is saved to the current directory and extracted in place.
+download_and_extract() {
     local url="$1"
     local output="$2"
 
+    # Download file if not already present
     if [ -f "$output" ]; then
         log "Found existing file: $output, skipping download"
     else
         log "Downloading from: $url"
         wget -q "$url" -O "$output" || error "Failed to download from $url"
+    fi
+
+    # Extract with error checking
+    log "Extracting $output..."
+    if ! tar xf "$output" --strip-components=1; then
+        rm -f "$output"
+        error "Failed to extract $output"
     fi
 }
 
@@ -247,9 +256,14 @@ collect_user_inputs() {
 setup_monero_daemon() {
     log "Setting up Monero node version ${MONERO_VERSION}..."
     
+    # Create monero directory and data directory
+    cd "$BASE_DIR"
     mkdir -p "$MONERO_DIR"
     mkdir -p "$MONERO_DIR/data"
     cd "$MONERO_DIR" || error "Failed to enter Monero directory"
+
+    # Remove current version of monero if it exists
+    find . -maxdepth 1 ! -name '*.tar.bz2' -type f -delete
     
     # Remove 'v' prefix if present
     local VERSION_NUM=${MONERO_VERSION#v}
@@ -265,11 +279,9 @@ setup_monero_daemon() {
     fi
 
     local DOWNLOAD_URL="https://downloads.getmonero.org/cli/${TARFILE}"
-    
-    # Download file if not already present
-    download_if_not_exists "${DOWNLOAD_URL}" "${TARFILE}"
-    tar xjf "$TARFILE" --strip-components=1
-    
+
+    download_and_extract "${DOWNLOAD_URL}" "${TARFILE}"
+
     # Set proper permissions
     sudo chown -R $USER:$USER "$MONERO_DIR"
     sudo chmod -R 755 "$MONERO_DIR"
@@ -316,60 +328,34 @@ EOF
 
 setup_p2pool() {
     log "Setting up P2Pool version ${P2POOL_VERSION}..."
-    
-    cd $BASE_DIR || error "Failed to enter base directory"
+
+    # Create p2pool directory
+    cd "$BASE_DIR"
+    mkdir -p "$P2POOL_DIR"
+    cd "$P2POOL_DIR" || error "Failed to enter P2Pool directory"
+
+    # Remove current version of p2pool if it exists
+    find . -maxdepth 1 ! -name '*.tar.gz' -type f -delete
 
     # Detect system architecture and set appropriate download URL
     local ARCH=$(uname -m)
     if [[ "$ARCH" == "x86_64" || "$ARCH" == "amd64" ]]; then
-        local P2POOL_FILENAME="p2pool-${P2POOL_VERSION}-linux-x64"
+        local TARFILE="p2pool-${P2POOL_VERSION}-linux-x64.tar.gz"
     elif [[ "$ARCH" == "aarch64" ]]; then
-        local P2POOL_FILENAME="p2pool-${P2POOL_VERSION}-linux-aarch64"
+        local TARFILE="p2pool-${P2POOL_VERSION}-linux-aarch64.tar.gz"
     else
         error "Unsupported architecture: $ARCH"
     fi
 
-    local TARFILE="${P2POOL_FILENAME}.tar.gz"
     local DOWNLOAD_URL="https://github.com/SChernykh/p2pool/releases/download/${P2POOL_VERSION}/${TARFILE}"
     
-    # Remove any existing corrupted files
-    if [ -f "$TARFILE" ]; then
-        log "Removing existing P2Pool archive..."
-        rm -f "$TARFILE"
-    fi
-    
-    # Remove existing p2pool directory if it exists
-    if [ -d "$P2POOL_DIR" ]; then
-        log "Removing existing P2Pool directory..."
-        rm -rf "$P2POOL_DIR"
-    fi
-
-    # Download fresh copy
-    download_if_not_exists "${DOWNLOAD_URL}" "${TARFILE}"
-
-    # Verify the download
-    if [ ! -f "$TARFILE" ] || [ ! -s "$TARFILE" ]; then
-        error "P2Pool download failed or file is empty"
-    fi
-
-    # Extract with error checking
-    log "Extracting P2Pool..."
-    if ! tar xzf "$TARFILE"; then
-        rm -f "$TARFILE"
-        error "Failed to extract P2Pool"
-    fi
-
-    # Rename the extracted directory to 'p2pool'
-    mv "${P2POOL_FILENAME}" "p2pool" || error "Failed to rename P2Pool directory"
-
-    # Clean up
-    rm -f "$TARFILE"
+    download_and_extract "${DOWNLOAD_URL}" "${TARFILE}"
 
     # Make p2pool executable
-    chmod +x "$P2POOL_DIR/p2pool" || error "Failed to make P2Pool executable"
+    chmod +x "p2pool" || error "Failed to make P2Pool executable"
 
     # Verify installation
-    if [ ! -x "$P2POOL_DIR/p2pool" ]; then
+    if [ ! -x "p2pool" ]; then
         error "P2Pool installation failed: executable not found or not executable"
     fi
 
@@ -419,41 +405,28 @@ EOF
 setup_xmrig() {
     log "Setting up XMRig CPU miner version ${XMRIG_VERSION}..."
     
+    # Create xmrig directory
+    cd "$BASE_DIR"
     mkdir -p "$XMRIG_DIR"
     cd "$XMRIG_DIR" || error "Failed to enter XMRig directory"
 
-    # XMRig does not provide official ARM buils,
-    # TODO: add support for building from source.
+    # Remove current version of xmrig if it exists
+    find . -maxdepth 1 ! -name '*.tar.gz' -type f -delete
+
     local ARCH=$(uname -m)
     if [[ "$ARCH" == "x86_64" || "$ARCH" == "amd64" ]]; then
         # Download and extract XMRig
-        local XMRIG_VERSION_NUM=${XMRIG_VERSION#v}  # Remove 'v' prefix from version
-        local DOWNLOAD_URL="https://github.com/xmrig/xmrig/releases/download/${XMRIG_VERSION}/xmrig-${XMRIG_VERSION_NUM}-noble-x64.tar.gz"
+        local TARFILE="xmrig-${XMRIG_VERSION_NUM#v}-noble-x64.tar.gz"
+        local DOWNLOAD_URL="https://github.com/xmrig/xmrig/releases/download/${XMRIG_VERSION}/${TARFILE}"
         
-        log "Downloading from: ${DOWNLOAD_URL}"
-        wget -q "${DOWNLOAD_URL}" -O xmrig.tar.gz || error "Failed to download XMRig"
-        tar xzf xmrig.tar.gz --strip-components=1 || error "Failed to extract XMRig"
-        rm xmrig.tar.gz
+        download_if_not_exists "${DOWNLOAD_URL}" "${TARFILE}"
+
     elif [[ "$ARCH" == "aarch64" ]]; then
         # Download XMRig source code
         local TARFILE="${XMRIG_VERSION}.tar.gz"
         local DOWNLOAD_URL="https://github.com/xmrig/xmrig/archive/refs/tags/${TARFILE}"
 
         download_if_not_exists "${DOWNLOAD_URL}" "xmrig.tar.gz"
-
-        # Extract with error checking
-        log "Extracting XMRig source code..."
-        if ! tar xzf "$TARFILE"; then
-            rm -f "$TARFILE"
-            error "Failed to extract XMRig source code"
-        fi
-
-        # Enter the extracted source directory (should be named xmrig-<version>)
-        local SOURCE_SUBDIR=$(find . -maxdepth 1 -type d -name "xmrig-*")
-        if [ -z "$SOURCE_SUBDIR" ]; then
-            error "Failed to find extracted XMRig source directory"
-        fi
-        cd "$SOURCE_SUBDIR" || error "Failed to enter XMRig source subdirectory"
 
         # Build from source
         mkdir build
@@ -462,11 +435,7 @@ setup_xmrig() {
         make -j$(nproc) || error "Failed to build XMRig"
 
         # Copy the built binary to the main XMRIG_DIR
-        cp xmrig ../../xmrig || error "Failed to copy XMRig binary"
-
-        # Remove source directory
-        cd ../../
-        rm -rf "$SOURCE_SUBDIR"
+        cp xmrig ../xmrig || error "Failed to copy XMRig binary"
     else
         error "Unsupported architecture: $ARCH"
     fi
