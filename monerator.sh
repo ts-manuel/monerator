@@ -301,15 +301,6 @@ EOF
     log "Monero node setup completed."
 }
 
-check_blockchain_sync() {
-    if [ -f "${MONERO_DIR}/data/lmdb/data.mdb" ]; then
-        # Blockchain data exists, check if synced
-        if tail -n 50 "${MONERO_DIR}/monerod.log" 2>/dev/null | grep -q "You are now synchronized with the network" || tail -n 50 "${MONERO_DIR}/monerod.log" 2>/dev/null | grep -q "100%"; then
-            return 0  # Synced
-        fi
-    fi
-    return 1  # Not synced
-}
 
 setup_p2pool() {
     log "Setting up P2Pool version ${P2POOL_VERSION}..."
@@ -517,38 +508,6 @@ install() {
     # Setup Monero daemon if selected
     if [[ $CREATE_SERVICE_MONEROD =~ ^[Yy]$ ]]; then
         setup_monero_daemon
-
-        # Check if blockchain needs syncing
-        if ! check_blockchain_sync; then
-            echo -e "${YELLOW}The Monero blockchain is not fully synced yet.${NC}"
-            read -p "Do you want to sync it before continuing? (recommended) [y/n]: " SYNC_FIRST
-            
-            if [[ $SYNC_FIRST =~ ^[Yy]$ ]]; then
-                echo -e "${GREEN}Starting Monero daemon for initial sync...${NC}"
-                echo -e "${YELLOW}This may take several hours. You can press Ctrl+C to stop syncing.${NC}"
-                echo -e "${YELLOW}The sync will continue from where it left off next time.${NC}"
-                
-                # Set up interrupt handler
-                trap handle_interrupt SIGINT
-                
-                # Run monerod in interactive mode for initial sync
-                if ! (cd "${MONERO_DIR}" && sudo ./monerod --config-file=${MONERO_DIR}/monerod.conf); then
-                    echo -e "\n${RED}Sync was interrupted or failed. Exiting...${NC}"
-                    exit 1
-                fi
-                
-                # Remove the trap handler
-                trap - SIGINT
-                
-                # Check if sync completed successfully
-                if ! check_blockchain_sync; then
-                    echo -e "\n${RED}Blockchain sync did not complete successfully. Please run the script again.${NC}"
-                    exit 1
-                fi
-                
-                echo -e "\n${GREEN}Blockchain sync completed successfully!${NC}"
-            fi
-        fi
     fi
 
     # Setup P2Pool if selected
